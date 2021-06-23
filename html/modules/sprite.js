@@ -14,22 +14,32 @@ export class Frame {
 
 export default class {
 
-    constructor(image=null, position=new Vector()) {
+    constructor(image=null, position=new Vector(), frames=null) {
         this.img = image
         this.pos = position
-        this.frames = []
+        this.frames = frames != null ? frames : []
         this.frameNo = 0
         this.time = 0
+        this.scale = new Vector({x: 1, y: 1})
+        this.enabled = true
     }
 
     update(dt) {
+        if (!this.enabled) {
+            return
+        }
         this.time -= dt
         while (this.time < 0) {
             ++this.frameNo
             if (this.frameNo == this.frames.length) {
                 this.frameNo = 0
             }
-            this.time += this.frames[this.frameNo].time
+            const frameTime = this.frames[this.frameNo].time
+            this.time += frameTime
+            if (frameTime <= 0) {
+                this.enabled = false
+                return
+            }
         }
     }
 
@@ -64,6 +74,14 @@ export default class {
 
     addFrames(frames) {
         this.frames = this.frames.concat(frames)
+    }
+
+    invertX(inverted) {
+        this.scale.x = inverted ? -1 : 1
+    }
+
+    invertY(inverted) {
+        this.scale.y = inverted ? -1 : 1
     }
 
 }
