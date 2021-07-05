@@ -177,8 +177,7 @@ export class Engine {
             for (const tile of collisionTiles) {
                 if (tile.sides.has(Side.Left)) {
                     const newX = bottomRightTile.x * 8 - this.actor._collision.x
-                    console.log(Math.abs(newX - this.actor._pos.x).toFixed(2), Math.abs(this.actor.lastShift.x).toFixed(2))
-                    if (Math.abs(newX - this.actor._pos.x).toFixed(2) <= Math.abs(this.actor.lastShift.x).toFixed(2)) {
+                    if (Math.abs(newX - this.actor._pos.x).toFixed(3) <= Math.abs(this.actor.lastShift.x).toFixed(3)) {
                         this.actor._pos.x = newX
                     } else {
                         continue
@@ -195,7 +194,9 @@ export class Engine {
             for (const tile of collisionTiles) {
                 if (tile.sides.has(Side.Right)) {
                     const newX = topLeftTile.x * 8 + 8
-                    if (Math.abs(newX - this.actor._pos.x).toFixed(2) <= Math.abs(this.actor.lastShift.x).toFixed(2)) {
+                    console.log(Math.abs(newX - this.actor._pos.x).toFixed(2), Math.abs(this.actor.lastShift.x).toFixed(2))
+                    if (Math.abs(newX - this.actor._pos.x).toFixed(3) <= Math.abs(this.actor.lastShift.x).toFixed(3)) {
+                        console.log(newX, this.actor._pos.x)
                         this.actor._pos.x = newX
                     } else {
                         continue
@@ -217,7 +218,7 @@ export class Engine {
             y: Math.floor(topLeft.y / 8)
         })
         let bottomRightTile = new Vector({
-            x: Math.floor((bottomRight.x) / 8),
+            x: Math.floor((bottomRight.x-0.1) / 8),
             y: Math.floor(bottomRight.y / 8)
         })
         if (this.actor.speed.y > 0) {
@@ -227,10 +228,10 @@ export class Engine {
             )
             for (const tile of collisionTiles) {
                 if (tile.sides.has(Side.Bottom)) {
-                    this.actor.state = 'bumpedTop'
                     const newY = topLeftTile.y * 8 + 8
-                    if (Math.abs(newY - this.actor._pos.y).toFixed(2) <= Math.abs(this.actor.lastShift.y).toFixed(2)) {
+                    if (Math.abs(newY - this.actor._pos.y).toFixed(3) <= Math.abs(this.actor.lastShift.y).toFixed(3)) {
                         this.actor._pos.y = newY
+                        this.actor.state = 'bumpedTop'
                     } else {
                         continue
                     }
@@ -245,7 +246,7 @@ export class Engine {
             for (const tile of collisionTiles) {
                 if (tile.sides.has(Side.Top)) {
                     const newY = bottomRightTile.y * 8 - this.actor._collision.y
-                    if (Math.abs(newY - this.actor._pos.y).toFixed(2) <= Math.abs(this.actor.lastShift.y).toFixed(2)) {
+                    if (Math.abs(newY - this.actor._pos.y).toFixed(3) <= Math.abs(this.actor.lastShift.y).toFixed(3)) {
                         if (this.actor.speed.y != 0) {
                             this.actor.state = 'landed'
                         }

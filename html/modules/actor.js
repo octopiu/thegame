@@ -54,7 +54,7 @@ export default class {
                     this._state = name
                     this._speed.y = 0
                 }
-                this._speed.x = 60
+                this._speed.x = 75
                 this._sprite.position = this._pos
                 this._sprite.invertX(this._direction < 0)
                 this._sprite.reset()
@@ -109,7 +109,7 @@ export default class {
 
     update(dt) {
         if (this._state == 'jump') {
-            this._speed.y -= 3
+            this._speed.y -= 220 * dt / 1000
         }
         this.lastShift = new Vector({
             x: this._speed.x * dt / 1000 * this._direction,
