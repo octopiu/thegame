@@ -9,7 +9,12 @@ export default class {
         this._sprite = null
         this._speed = new Vector({x: 0, y: 0})
         this._direction = 1
-        this._pos = new Vector({x: 0, y: 100})
+        this._pos = new Vector({x: 30, y: 100})
+        this._collision = new Vector({x: 20, y: 23})
+    }
+
+    get collision() {
+        return this._collision
     }
 
     get sprite() {
@@ -20,11 +25,23 @@ export default class {
         this._sprite = this.animations.get(name)
     }
 
+    get state() {
+        return this._state
+    }
+
+    get speed() {
+        return new Vector({x: this._speed.x*this._direction, y: this._speed.y})
+    }
+
     set state(name) {
-        this._state = name
+        if (name == this._state) return
         switch(name) {
             case 'stand': {
-                this.sprite = 'stand'
+                if (this._state != 'jump') {
+                    this.sprite = 'stand'
+                    this._state = name
+                    this._speed.y = 0
+                }
                 this._speed.x = 0
                 this._sprite.position = this._pos
                 this._sprite.invertX(this._direction < 0)
@@ -32,12 +49,45 @@ export default class {
                 break
             }
             case 'run': {
-                this.sprite = 'run'
-                this._speed.x = 50
+                if (this._state != 'jump') {
+                    this.sprite = 'run'
+                    this._state = name
+                    this._speed.y = 0
+                }
+                this._speed.x = 60
                 this._sprite.position = this._pos
                 this._sprite.invertX(this._direction < 0)
                 this._sprite.reset()
                 break
+            }
+            case 'jump': {
+                this._state = name
+                this.sprite = 'falling'
+                this._sprite.position = this._pos
+                this._sprite.invertX(this._direction < 0)
+                this._sprite.reset()
+                this._speed.y = 150
+                break
+            }
+            case 'falling': {
+                this._state = 'jump'
+                this.sprite = 'falling'
+                this._sprite.position = this._pos
+                this._sprite.invertX(this._direction < 0)
+                this._sprite.reset()
+                break
+            }
+            case 'landed': {
+                this._state = null
+                if (this._speed.x == 0) {
+                    this.state = 'stand'
+                } else {
+                    this.state = 'run'
+                }
+                break
+            }
+            case 'bumpedTop': {
+                this._speed.y = 0
             }
             default: { break }
         }
@@ -58,11 +108,14 @@ export default class {
     }
 
     update(dt) {
-        let tVec = new Vector({
+        if (this._state == 'jump') {
+            this._speed.y -= 3
+        }
+        this.lastShift = new Vector({
             x: this._speed.x * dt / 1000 * this._direction,
             y: -this._speed.y * dt / 1000,
         })
-        this._pos.add(tVec)
+        this._pos.add(this.lastShift)
         this._sprite.position = this._pos
     }
 
@@ -82,6 +135,11 @@ export default class {
             new Frame({x: 1, y: 1, width: 21, height: 24, time: 0}),
         ]
         this.setSprite('stand', new Sprite(image, new Vector({x: 0, y: 0}), frames))
+
+        frames = [
+            new Frame({x: 130, y: 1, width: 26, height: 30, time: 0})
+        ]
+        this.setSprite('falling', new Sprite(image, new Vector({x: 0, y:0}), frames))
     }
 
 }

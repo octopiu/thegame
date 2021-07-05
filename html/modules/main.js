@@ -2,6 +2,7 @@ import Vector from './vector.js'
 import Sprite from './sprite.js'
 import { Frame } from './sprite.js'
 import Level from './level.js'
+import { Side } from './level.js'
 import Actor from './actor.js'
 
 export class Engine {
@@ -19,6 +20,17 @@ export class Engine {
         this.scale = 1
         this.level = new Level()
         this.actor = new Actor()
+        this._inputs = new Map([
+            ['left', false],
+            ['right', false],
+            ['up', false],
+        ])
+        this._prevInputs = new Map([
+            ['left', false],
+            ['right', false],
+            ['up', false],
+        ])
+        this.collisionXY = []
     }
 
     prepare() {
@@ -68,19 +80,43 @@ export class Engine {
     inputHandler(event, state) {
         if (event.repeat) return
         if (state == 'keyup') {
-            this.actor.state = 'stand'
+            switch (event.key) {
+                case 'ArrowLeft':
+                case 'Left': {
+                    this._inputs.set('left', false)
+                    break
+                }
+                case 'ArrowRight':
+                case 'Right': {
+                    this._inputs.set('right', false)
+                    break
+                }
+            }
+            if (!this._inputs.get('left') && !this._inputs.get('right')) {
+                this.actor.state = 'stand'
+            }
         } else if (state == 'keydown') {
             switch (event.key) {
                 case 'ArrowLeft':
                 case 'Left': {
+                    this._inputs.set('left', true)
                     this.actor.state = 'run'
                     this.actor.direction = 'left'
                     break
                 }
                 case 'ArrowRight':
                 case 'Right': {
+                    this._inputs.set('right', true)
                     this.actor.state = 'run'
                     this.actor.direction = 'right'
+                    break
+                }
+                case 'ArrowUp':
+                case 'Up': {
+                    this._inputs.set('up', true)
+                    if (this.actor.state != 'jump') {
+                        this.actor.state = 'jump'
+                    }
                     break
                 }
             }
@@ -96,19 +132,139 @@ export class Engine {
         let timestamp = Date.now()
         let delta = (timestamp - this.timestamp)
         this.timestamp = timestamp
-        
-        /* let tVec = new Vector({
-            x: this.velocity.x * delta / 1000,
-            y: -this.velocity.y * delta / 1000,
-        })
-        this.sprite.move(tVec) */
 
-        /* if (this.sprite.position.x * this.scale >= this.canvas.width) {
-            this.sprite.move({x: -this.canvas.width / this.scale})
-        } */
-
+        for (let [k, v] of this._inputs) {
+           this._prevInputs.set(k, v)
+        }
         this.actor.update(delta)
+        this.collisionDetection()
+
         window.requestAnimationFrame((timestamp) => this.draw(timestamp))
+    }
+
+    _getTiles(start, end) {
+        let result = []
+        for (let x=start.x; x<=end.x; ++x) {
+            for (let y=start.y; y<=end.y; ++y) {
+                const tile = this.level.tile({x: x, y: y})
+                if (tile !== undefined) {
+                    result.push(tile)
+                }
+            }
+        }
+        return result
+    }
+
+    HCollisionDetection() {
+        let collisionTiles = []
+        this.collisionXY = []
+        let topLeft = this.actor._pos
+        let bottomRight = new Vector({x: topLeft.x + this.actor._collision.x, y: topLeft.y + this.actor._collision.y})
+        let topLeftTile = new Vector({
+            x: Math.floor(topLeft.x / 8),
+            y: Math.floor(topLeft.y / 8)
+        })
+        let bottomRightTile = new Vector({
+            x: Math.floor(bottomRight.x / 8),
+            y: Math.floor((bottomRight.y-0.1) / 8)
+        })
+        if (this.actor.speed.x > 0) {
+            let y = bottomRightTile.y
+            collisionTiles = this._getTiles(
+                {x: bottomRightTile.x, y: topLeftTile.y},
+                {x: bottomRightTile.x, y: y}
+            )
+            for (const tile of collisionTiles) {
+                if (tile.sides.has(Side.Left)) {
+                    const newX = bottomRightTile.x * 8 - this.actor._collision.x
+                    console.log(Math.abs(newX - this.actor._pos.x).toFixed(2), Math.abs(this.actor.lastShift.x).toFixed(2))
+                    if (Math.abs(newX - this.actor._pos.x).toFixed(2) <= Math.abs(this.actor.lastShift.x).toFixed(2)) {
+                        this.actor._pos.x = newX
+                    } else {
+                        continue
+                    }
+                    return true
+                }
+            }
+        } else {
+            let y = bottomRightTile.y
+            collisionTiles = this._getTiles(
+                {x: topLeftTile.x, y: topLeftTile.y},
+                {x: topLeftTile.x, y: y}
+            )
+            for (const tile of collisionTiles) {
+                if (tile.sides.has(Side.Right)) {
+                    const newX = topLeftTile.x * 8 + 8
+                    if (Math.abs(newX - this.actor._pos.x).toFixed(2) <= Math.abs(this.actor.lastShift.x).toFixed(2)) {
+                        this.actor._pos.x = newX
+                    } else {
+                        continue
+                    }
+                    return true
+                }
+            }
+        }
+        return true
+    }
+
+    VCollisionDetection() {
+        let collisionTiles = []
+        this.collisionXY = []
+        let topLeft = this.actor._pos
+        let bottomRight = new Vector({x: topLeft.x + this.actor._collision.x, y: topLeft.y + this.actor._collision.y})
+        let topLeftTile = new Vector({
+            x: Math.floor((topLeft.x) / 8),
+            y: Math.floor(topLeft.y / 8)
+        })
+        let bottomRightTile = new Vector({
+            x: Math.floor((bottomRight.x) / 8),
+            y: Math.floor(bottomRight.y / 8)
+        })
+        if (this.actor.speed.y > 0) {
+            collisionTiles = this._getTiles(
+                {x: topLeftTile.x, y: topLeftTile.y},
+                {x: bottomRightTile.x, y: topLeftTile.y}
+            )
+            for (const tile of collisionTiles) {
+                if (tile.sides.has(Side.Bottom)) {
+                    this.actor.state = 'bumpedTop'
+                    const newY = topLeftTile.y * 8 + 8
+                    if (Math.abs(newY - this.actor._pos.y).toFixed(2) <= Math.abs(this.actor.lastShift.y).toFixed(2)) {
+                        this.actor._pos.y = newY
+                    } else {
+                        continue
+                    }
+                    return false
+                }
+            }
+        } else {
+            collisionTiles = this._getTiles(
+                {x: topLeftTile.x, y: bottomRightTile.y},
+                {x: bottomRightTile.x, y: bottomRightTile.y}
+            )
+            for (const tile of collisionTiles) {
+                if (tile.sides.has(Side.Top)) {
+                    const newY = bottomRightTile.y * 8 - this.actor._collision.y
+                    if (Math.abs(newY - this.actor._pos.y).toFixed(2) <= Math.abs(this.actor.lastShift.y).toFixed(2)) {
+                        if (this.actor.speed.y != 0) {
+                            this.actor.state = 'landed'
+                        }
+                        this.actor._pos.y = newY
+                    } else {
+                        continue
+                    }
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    collisionDetection() {
+        if (!this.VCollisionDetection()) {
+            this.actor.state = 'falling'
+        }
+        this.HCollisionDetection()
     }
 
     draw(timestamp) {
@@ -119,16 +275,22 @@ export class Engine {
         this.drawTimestamp = timestamp
 
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.strokeStyle = 'red'
 
-        const white = 0xffffff
+        let screenShift = null
+        if (this.actor._pos.x > this.canvas.width / 2) {
+            screenShift = new Vector({x: this.actor._pos.x - this.canvas.width / 2, y: 0})
+        } else {
+            screenShift = new Vector()
+        }
         let frame = this.brick.frameData
-        for (let i=0; i < this.canvas.width / 8; ++i) {
+        for (let i=Math.floor(screenShift.x / 8); i < Math.ceil((screenShift.x + this.canvas.width) / 8); ++i) {
             for (let j=0; j < this.canvas.height / 8; ++j) {
                 const tile = this.level.tile({x: i, y: j})
-                if (tile != white) {
+                if (tile !== undefined) {
                     this.ctx.drawImage(
                         this.brick.image, frame.x, frame.y, frame.width, frame.height,
-                        i*8, j*8, frame.width, frame.height
+                        i*8 - screenShift.x, j*8 - screenShift.y, frame.width, frame.height
                     )
                 }
             }
@@ -138,14 +300,17 @@ export class Engine {
         let sprite = this.actor.sprite
         sprite.update(delta)
 
+        this.ctx.strokeRect(this.actor._pos.x - screenShift.x, this.actor._pos.y - screenShift.y,
+                      this.actor._collision.x, this.actor._collision.y)
+
         frame = sprite.frameData
-        let position = sprite.position
+        let position = this.actor._pos
         const scale = sprite.scale
         this.ctx.save()
         this.ctx.scale(scale.x, scale.y)
         this.ctx.drawImage(
             sprite.image, frame.x, frame.y, frame.width, frame.height,
-            Math.floor(position.x*scale.x), Math.floor(position.y*scale.y),
+            Math.floor((position.x - screenShift.x)*scale.x), Math.floor((position.y - screenShift.y)*scale.y),
             frame.width*scale.x, frame.height*scale.y
         )
         this.ctx.restore()
