@@ -11,6 +11,7 @@ export default class {
         this._direction = 1
         this._pos = new Vector({x: 30, y: 100})
         this._collision = new Vector({x: 20, y: 23})
+        this.deceleration = 0
     }
 
     get collision() {
@@ -35,6 +36,8 @@ export default class {
 
     set state(name) {
         if (name == this._state) return
+        if (name == 'falling' && this._state == 'jump') return
+        console.log(name)
         switch(name) {
             case 'stand': {
                 if (this._state != 'jump') {
@@ -67,6 +70,14 @@ export default class {
                 this._sprite.invertX(this._direction < 0)
                 this._sprite.reset()
                 this._speed.y = 150
+                this.deceleration = 0
+                this.timer = 300  // 0.5 seconds
+                break
+            }
+            case 'stop_jump': {
+                if (this._state == 'jump') {
+                    this.deceleration = 980
+                }
                 break
             }
             case 'falling': {
@@ -75,6 +86,7 @@ export default class {
                 this._sprite.position = this._pos
                 this._sprite.invertX(this._direction < 0)
                 this._sprite.reset()
+                this.deceleration = 980
                 break
             }
             case 'landed': {
@@ -88,6 +100,7 @@ export default class {
             }
             case 'bumpedTop': {
                 this._speed.y = 0
+                this.state = 'stop_jump'
             }
             default: { break }
         }
@@ -109,7 +122,11 @@ export default class {
 
     update(dt) {
         if (this._state == 'jump') {
-            this._speed.y -= 220 * dt / 1000
+            this.timer -= dt
+            if (this.timer <= 0) {
+                this.state = 'stop_jump'
+            }
+            this._speed.y -= this.deceleration * dt / 1000
         }
         this.lastShift = new Vector({
             x: this._speed.x * dt / 1000 * this._direction,

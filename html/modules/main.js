@@ -69,7 +69,7 @@ export class Engine {
         this.brick.addFrames(frames)
 
         this.actor.load()
-        this.actor.state = 'stand'
+        this.actor.state = 'falling'
 
         this.level.load('1')
 
@@ -89,6 +89,12 @@ export class Engine {
                 case 'ArrowRight':
                 case 'Right': {
                     this._inputs.set('right', false)
+                    break
+                }
+                case 'Up':
+                case 'ArrowUp': {
+                    this._inputs.set('up', false)
+                    this.actor.state = 'stop_jump'
                     break
                 }
             }
